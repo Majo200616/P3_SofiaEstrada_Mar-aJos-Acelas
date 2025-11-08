@@ -11,6 +11,7 @@ import numpy as np
 import os
 from datetime import datetime
 import cv2
+import nibabel as nib
 
 class DicomLoader:
     def __init__(self, folder_path):
@@ -146,6 +147,7 @@ class GestionImagenes:
         plt.show()
 
         return segmentada
+    
     def zoom_y_recorte(self, pixel_spacing=(1, 1), slice_thickness=1, nombre_archivo=None):
         """Realiza un zoom sobre el corte central, dibuja el cuadro y guarda el recorte."""
         corte = self.volume[self.volume.shape[0] // 2, :, :]
@@ -184,6 +186,53 @@ class GestionImagenes:
             print(f"Imagen recortada guardada como {nombre_archivo}.png")
 
         return recorte_zoom
+    
+    def transformacion_morfologica(self, tipo_corte, indice, operacion, kernel_size=3, nombre_archivo=None):
+        """
+        Aplica una transformación morfológica (erode, dilate, open, close)
+        sobre un corte del volumen, normaliza a uint8, muestra y guarda el resultado.
+        """
+        # Obtener el corte solicitado
+        corte = self.obtener_corte(tipo_corte, indice)
+
+        # Normalizar a uint8 para OpenCV
+        img_uint8 = ((corte - np.min(corte)) / (np.max(corte) - np.min(corte)) * 255).astype(np.uint8)
+
+        # Crear kernel cuadrado del tamaño indicado
+        kernel = np.ones((kernel_size, kernel_size), np.uint8)
+
+        # Elegir la operación
+        if operacion == "erode":
+            resultado = cv2.erode(img_uint8, kernel, iterations=1)
+        elif operacion == "dilate":
+            resultado = cv2.dilate(img_uint8, kernel, iterations=1)
+        elif operacion == "open":
+            resultado = cv2.morphologyEx(img_uint8, cv2.MORPH_OPEN, kernel)
+        elif operacion == "close":
+            resultado = cv2.morphologyEx(img_uint8, cv2.MORPH_CLOSE, kernel)
+        else:
+            raise ValueError("Operación morfológica no válida. Usa: 'erode', 'dilate', 'open' o 'close'.")
+
+        # Mostrar imagen resultante
+        plt.figure(figsize=(8, 4))
+        plt.subplot(1, 2, 1)
+        plt.imshow(img_uint8, cmap='gray')
+        plt.title("Corte original")
+        plt.axis('off')
+
+        plt.subplot(1, 2, 2)
+        plt.imshow(resultado, cmap='gray')
+        plt.title(f"Transformación: {operacion} (kernel={kernel_size})")
+        plt.axis('off')
+        plt.show()
+
+        # Guardar imagen
+        if nombre_archivo:
+            cv2.imwrite(f"{nombre_archivo}.png", resultado)
+            print(f"Imagen guardada como {nombre_archivo}.png")
+
+        return resultado
+    
 
     
     
@@ -200,4 +249,11 @@ gestor = GestionImagenes(volumen)
 
 #corte = gestor.obtener_corte(tipo_corte, indice)
 #gestor.segmentar(corte, tipo_binarizacion)
-gestor.zoom_y_recorte(nombre_archivo="recorte_prueba")
+#gestor.zoom_y_recorte(nombre_archivo="recorte_prueba")
+gestor.transformacion_morfologica(
+    tipo_corte="coronal",   # 'axial', 'coronal' o 'sagital'
+    indice=100,           # número de corte
+    operacion="erode",     # 'erode', 'dilate', 'open', 'close'
+    kernel_size=10,        # tamaño que luego ingresará el usuario en el menú
+    nombre_archivo="resultado_open"
+)
