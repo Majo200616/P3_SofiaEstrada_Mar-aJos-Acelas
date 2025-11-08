@@ -9,6 +9,8 @@ import pydicom
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+from datetime import datetime
+import cv2
 
 class DicomLoader:
     def __init__(self, folder_path):
@@ -83,32 +85,80 @@ class EstudioImaginologico:
 
     def _calcular_duracion(self):
         """Calcula la duración (segundos) entre StudyTime y SeriesTime."""
-        if not self.study_time or not self.series_time:
-            return None
-        try:
-            h1, m1, s1 = int(self.study_time[:2]), int(self.study_time[2:4]), int(self.study_time[4:6])
-            h2, m2, s2 = int(self.series_time[:2]), int(self.series_time[2:4]), int(self.series_time[4:6])
-            return (h2*3600 + m2*60 + s2) - (h1*3600 + m1*60 + s1)
-        except:
-            return None
+        t1 = datetime.strptime(self.study_time.split('.')[0], "%H%M%S")
+        t2 = datetime.strptime(self.series_time.split('.')[0], "%H%M%S")
+        duracion = t2 - t1
+        return duracion
 
     def mostrar_info(self):
         """Muestra la información general del estudio"""
         print("\nInformación del Estudio Imaginológico DICOM:")
-        print(f"Fecha del Estudio:       {self.study_date}")
-        print(f"Hora del Estudio:        {self.study_time}")
-        print(f"Modalidad:               {self.modality}")
+        print(f"Fecha del Estudio: {self.study_date}")
+        print(f"Hora del Estudio: {self.study_time}")
+        print(f"Modalidad: {self.modality}")
         print(f"Descripción del Estudio: {self.study_description}")
-        print(f"Hora de la Serie:        {self.series_time}")
-        print(f"Duración (segundos):     {self.duracion}")
-        print(f"Forma del volumen:       {self.volume.shape}")
+        print(f"Hora de la Serie: {self.series_time}")
+        print(f"Duración: {self.duracion}")
+        print(f"Forma del volumen: {self.volume.shape}")
 
+class GestionImagenes:
+    def __init__(self, volume):
+        self.volume = volume
+
+    def obtener_corte(self, tipo, indice):
+        """Devuelve el corte solicitado según tipo ('axial', 'coronal', 'sagital') e índice."""
+        if tipo == "axial":
+            return self.volume[indice, :, :]
+        elif tipo == "coronal":
+            return self.volume[:, indice, :]
+        elif tipo == "sagital":
+            return self.volume[:, :, indice]
+        else:
+            raise ValueError("Tipo de corte no válido")
+
+    def segmentar(self, corte, tipo_binarizacion):
+        """Aplica segmentación (binarización) según el tipo especificado."""
+        metodos = {
+            "binario": cv2.THRESH_BINARY,
+            "binario_inv": cv2.THRESH_BINARY_INV,
+            "truncado": cv2.THRESH_TRUNC,
+            "tozero": cv2.THRESH_TOZERO,
+            "tozero_inv": cv2.THRESH_TOZERO_INV
+        }
+
+        metodo = metodos.get(tipo_binarizacion.lower())
+        if metodo is None:
+            raise ValueError("Tipo de binarización no válido")
+
+        umbral, segmentada = cv2.threshold(corte, 100, 255, metodo)
+
+        plt.figure(figsize=(8, 4))
+        plt.subplot(1, 2, 1)
+        plt.imshow(corte, cmap='gray')
+        plt.title("Original")
+        plt.axis('off')
+
+        plt.subplot(1, 2, 2)
+        plt.imshow(segmentada, cmap='gray')
+        plt.title(f"Segmentada ({tipo_binarizacion})")
+        plt.axis('off')
+
+        plt.show()
+
+        return segmentada
 
     
     
 carpeta = r"datos\PPMI\3128\MPRAGE_GRAPPA"
 loader= DicomLoader(carpeta)
 volumen= loader.load()
-loader.mostrar_cortes()  
-estudio = EstudioImaginologico(carpeta, volumen)
-estudio.mostrar_info()
+#loader.mostrar_cortes()  
+#estudio = EstudioImaginologico(carpeta, volumen)
+#estudio.mostrar_info()
+gestor = GestionImagenes(volumen)
+tipo_corte = "axial"
+indice = 100  # puedes probar otros números dentro del rango
+tipo_binarizacion = "tozero"  # o "truncado", "tozero", etc.
+
+corte = gestor.obtener_corte(tipo_corte, indice)
+gestor.segmentar(corte, tipo_binarizacion)
