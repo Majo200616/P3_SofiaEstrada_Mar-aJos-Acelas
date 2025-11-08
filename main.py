@@ -3,6 +3,8 @@ import numpy as np
 import pydicom
 import matplotlib.pyplot as plt
 import cv2
+import nibabel as nib
+
 
 class DicomLoader:
     def __init__(self, folder_path):
@@ -151,6 +153,47 @@ def zoom_y_recorte(volume, pixel_spacing=(1,1), slice_thickness=1):
     nombre = input("Ingrese el nombre para guardar la imagen recortada: ")
     cv2.imwrite(f"{nombre}.png", recorte_zoom)
     print(f"Imagen recortada guardada como {nombre}.png")
+
+
+def convertir_a_nifti(carpeta_dicom, nombre_salida="resultado.nii"):
+    """
+    Convierte una carpeta con archivos DICOM a formato NIfTI (.nii).
+    
+    Parámetros:
+        carpeta_dicom (str): ruta a la carpeta que contiene los archivos DICOM
+        nombre_salida (str): nombre del archivo .nii de salida
+    """
+    #Leer todos los archivos DICOM de la carpeta
+    archivos = [os.path.join(carpeta_dicom, f) for f in os.listdir(carpeta_dicom) if f.endswith(".dcm")]
+    if not archivos:
+        print("No se encontraron archivos DICOM en la carpeta.")
+        return
+
+    #Cargar las imágenes y ordenarlas por su posición en el eje Z
+    slices = [pydicom.dcmread(a) for a in archivos]
+    slices.sort(key=lambda s: float(s.ImagePositionPatient[2]) if "ImagePositionPatient" in s else 0)
+
+    #Crear un volumen 3D con los píxeles de cada corte
+    volumen = np.stack([s.pixel_array for s in slices], axis=-1)
+
+    #Extraer el tamaño de píxel y el espesor del corte (si están disponibles)
+    try:
+        pixel_spacing = slices[0].PixelSpacing
+        slice_thickness = float(slices[0].SliceThickness)
+    except:
+        pixel_spacing = [1.0, 1.0]
+        slice_thickness = 1.0
+
+    # Crear la matriz de afinidad (define la orientación espacial del volumen)
+    affine = np.diag([pixel_spacing[0], pixel_spacing[1], slice_thickness, 1])
+
+    #Crear el objeto NIfTI
+    nifti_img = nib.Nifti1Image(volumen, affine)
+
+    #Guardar el archivo
+    nib.save(nifti_img, nombre_salida)
+    print(f"Conversión completada. Archivo guardado como: {nombre_salida}")
+ 
   
 
     
@@ -162,6 +205,9 @@ loader.mostrar_cortes()
 estudio = EstudioImaginologico(carpeta, volumen)
 estudio.mostrar_info()
 
+#como usarla
+carpeta = r"datos\PPMI\3128\MPRAGE_GRAPPA"
+convertir_a_nifti(carpeta, "paciente3128.nii")
 
 
        
