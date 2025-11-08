@@ -4,7 +4,7 @@ import pydicom
 import matplotlib.pyplot as plt
 
 class DicomLoader:
-    def _init_(self, folder_path):
+    def __init__(self, folder_path):
         self.folder_path = folder_path
         self.slices = []
         self.volume = None
