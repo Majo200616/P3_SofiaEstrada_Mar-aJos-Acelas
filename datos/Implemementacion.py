@@ -104,6 +104,7 @@ class EstudioImaginologico:
         print(f"Forma del volumen: {self.volume.shape}")
 
 class GestionImagenes:
+    
     def __init__(self, volume, carpeta):
         self.volume = volume
         self.carpeta= carpeta
