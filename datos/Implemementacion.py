@@ -37,7 +37,8 @@ class DicomLoader:
       """Muestra los tres cortes principales del volumen"""
       if self.volume is None:
           raise ValueError("Primero debes cargar los datos DICOM con el método load().")
-
+    
+ 
       z, y, x = np.array(self.volume.shape) // 2  # posiciones centrales
 
       fig, axs = plt.subplots(1, 3, figsize=(12, 4))
@@ -69,7 +70,7 @@ class EstudioImaginologico:
         """Crea un estudio imaginológico a partir de una carpeta DICOM y su volumen reconstruido."""
         self.folder_path = folder_path
         self.volume = volume
-
+        
         # Tomar el primer archivo DICOM de la carpeta
         primer_archivo = [f for f in os.listdir(folder_path) if f.lower().endswith('.dcm')][0]
         ds = pydicom.dcmread(os.path.join(folder_path, primer_archivo))
@@ -103,8 +104,9 @@ class EstudioImaginologico:
         print(f"Forma del volumen: {self.volume.shape}")
 
 class GestionImagenes:
-    def __init__(self, volume):
+    def __init__(self, volume, carpeta):
         self.volume = volume
+        self.carpeta= carpeta
 
     def obtener_corte(self, tipo, indice):
         """Devuelve el corte solicitado según tipo ('axial', 'coronal', 'sagital') e índice."""
@@ -117,8 +119,10 @@ class GestionImagenes:
         else:
             raise ValueError("Tipo de corte no válido")
 
-    def segmentar(self, corte, tipo_binarizacion):
+    def segmentar(self, corte, tipo_binarizacion, nombre_archivo):
         """Aplica segmentación (binarización) según el tipo especificado."""
+        
+    
         metodos = {
             "binario": cv2.THRESH_BINARY,
             "binario_inv": cv2.THRESH_BINARY_INV,
@@ -145,6 +149,8 @@ class GestionImagenes:
         plt.axis('off')
 
         plt.show()
+        cv2.imwrite(f"{nombre_archivo}.jpg", segmentada)
+        print(f"Imagen segmentada guardada como {nombre_archivo}.jpg")
 
         return segmentada
     
@@ -227,22 +233,67 @@ class GestionImagenes:
         plt.show()
 
         # Guardar imagen
-        if nombre_archivo:
-            cv2.imwrite(f"{nombre_archivo}.png", resultado)
-            print(f"Imagen guardada como {nombre_archivo}.png")
+      
+        cv2.imwrite(f"{nombre_archivo}.png", resultado)
+        print(f"Imagen guardada como {nombre_archivo}.png")
 
         return resultado
     
+    def convertir_a_nifti(self, nombre_salida="resultado.nii"):
+        """Convierte la carpeta DICOM asociada en un archivo NIfTI (.nii)."""
+        archivos = [os.path.join(self.carpeta, f) for f in os.listdir(self.carpeta) if f.endswith(".dcm")]
+        if not archivos:
+            print("No se encontraron archivos DICOM en la carpeta.")
+            return
 
+        slices = [pydicom.dcmread(a) for a in archivos]
+        slices.sort(key=lambda s: float(s.ImagePositionPatient[2]) if "ImagePositionPatient" in s else 0)
+        volumen = np.stack([s.pixel_array for s in slices], axis=-1)
+
+        try:
+            pixel_spacing = slices[0].PixelSpacing
+            slice_thickness = float(slices[0].SliceThickness)
+        except:
+            pixel_spacing = [1.0, 1.0]
+            slice_thickness = 1.0
+
+        affine = np.diag([pixel_spacing[0], pixel_spacing[1], slice_thickness, 1])
+        nifti_img = nib.Nifti1Image(volumen, affine)
+        nib.save(nifti_img, nombre_salida)
+        print(f"Conversión completada. Archivo guardado como: {nombre_salida}")
     
+
+class GestorObjetos:
+    def __init__(self):
+        self.objetos = {}
+
+    def registrar(self, nombre, objeto):
+        """Agrega o actualiza un objeto almacenado."""
+        self.objetos[nombre] = objeto
+
+    def obtener(self, nombre):
+        """Devuelve un objeto almacenado por su nombre."""
+        return self.objetos.get(nombre)
+
+    def listar(self):
+        """Devuelve una lista con los nombres de los objetos almacenados."""
+        return list(self.objetos.keys())
     
 carpeta = r"datos\PPMI\3128\MPRAGE_GRAPPA"
+
+gestor_objetos = GestorObjetos()
+
 loader= DicomLoader(carpeta)
+gestor_objetos.registrar("loader", loader)
+
 volumen= loader.load()
 #loader.mostrar_cortes()  
-#estudio = EstudioImaginologico(carpeta, volumen)
+estudio = EstudioImaginologico(carpeta, volumen)
+gestor_objetos.registrar("estudio", estudio)
 #estudio.mostrar_info()
-gestor = GestionImagenes(volumen)
+gestor = GestionImagenes(volumen, carpeta)
+gestor_objetos.registrar("gestor", gestor)
+
 #tipo_corte = "axial"
 #indice = 100  # puedes probar otros números dentro del rango
 #tipo_binarizacion = "tozero"  # o "truncado", "tozero", etc.
@@ -250,10 +301,11 @@ gestor = GestionImagenes(volumen)
 #corte = gestor.obtener_corte(tipo_corte, indice)
 #gestor.segmentar(corte, tipo_binarizacion)
 #gestor.zoom_y_recorte(nombre_archivo="recorte_prueba")
-gestor.transformacion_morfologica(
+"""gestor.transformacion_morfologica(
     tipo_corte="coronal",   # 'axial', 'coronal' o 'sagital'
     indice=100,           # número de corte
     operacion="erode",     # 'erode', 'dilate', 'open', 'close'
     kernel_size=10,        # tamaño que luego ingresará el usuario en el menú
     nombre_archivo="resultado_open"
-)
+)"""
+gestor.convertir_a_nifti("archivo_nifti.nii")
