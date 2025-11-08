@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pydicom
 import matplotlib.pyplot as plt
+import cv2
 
 class DicomLoader:
     def __init__(self, folder_path):
@@ -98,6 +99,59 @@ class EstudioImaginologico:
         print(f"Duración (segundos):     {self.duracion}")
         print(f"Forma del volumen:       {self.volume.shape}")
 
+def zoom_y_recorte(volume, pixel_spacing=(1,1), slice_thickness=1):
+    """
+    Realiza un 'zoom' en el corte central del volumen, dibuja un cuadro de recorte,
+    normaliza, redimensiona y muestra ambas imágenes con OpenCV.
+    """
+    # Seleccionar el corte central
+    corte = volume[volume.shape[0] // 2, :, :]
+
+    #Normalización a uint8 según la fórmula dada
+    img_norm = ((corte - np.min(corte)) / (np.max(corte) - np.min(corte)) * 255).astype(np.uint8)
+
+    # Convertir a BGR para dibujar colores
+    img_bgr = cv2.cvtColor(img_norm, cv2.COLOR_GRAY2BGR)
+
+    # Definir región de interés (ROI) para el recorte
+    h, w = img_bgr.shape[:2]
+    x, y, ancho, alto = w // 4, h // 4, w // 2, h // 2  # recorte central
+
+    # Dibujar el cuadro amarillo sobre la imagen original
+    cv2.rectangle(img_bgr, (x, y), (x + ancho, y + alto), (0, 255, 255), 2)
+
+    # Calcular dimensiones físicas en mm (usando pixelSpacing y SliceThickness)
+    dim_x_mm = ancho * pixel_spacing[0]
+    dim_y_mm = alto * pixel_spacing[1]
+    texto = f"{dim_x_mm:.1f}mm x {dim_y_mm:.1f}mm, Espesor: {slice_thickness}mm"
+
+    # Escribir el texto sobre la imagen
+    cv2.putText(img_bgr, texto, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,255,255), 2)
+
+    #Recorte de la región seleccionada
+    recorte = img_norm[y:y+alto, x:x+ancho]
+
+    #Redimensionar el recorte (zoom)
+    recorte_zoom = cv2.resize(recorte, (w, h), interpolation=cv2.INTER_CUBIC)
+
+    #Mostrar ambas imágenes con matplotlib
+    fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+    axs[0].imshow(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB))
+    axs[0].title("Corte original con cuadro")
+    axs[0].axis('off')
+
+    axs[1].imshow(recorte_zoom, cmap='gray')
+    axs[1].set_title("Recorte con zoom")
+    axs[1].axis('off')
+
+    plt.tight_layout()
+    plt.show()
+
+    # Guardar el recorte zoom como archivo PNG
+    nombre = input("Ingrese el nombre para guardar la imagen recortada: ")
+    cv2.imwrite(f"{nombre}.png", recorte_zoom)
+    print(f"Imagen recortada guardada como {nombre}.png")
+  
 
     
     
