@@ -146,6 +146,44 @@ class GestionImagenes:
         plt.show()
 
         return segmentada
+    def zoom_y_recorte(self, pixel_spacing=(1, 1), slice_thickness=1, nombre_archivo=None):
+        """Realiza un zoom sobre el corte central, dibuja el cuadro y guarda el recorte."""
+        corte = self.volume[self.volume.shape[0] // 2, :, :]
+
+        img_norm = ((corte - np.min(corte)) / (np.max(corte) - np.min(corte)) * 255).astype(np.uint8)
+        img_bgr = cv2.cvtColor(img_norm, cv2.COLOR_GRAY2BGR)
+
+        h, w = img_bgr.shape[:2]
+        x, y, ancho, alto = w // 4, h // 4, w // 2, h // 2
+
+        cv2.rectangle(img_bgr, (x, y), (x + ancho, y + alto), (0, 255, 255), 2)
+
+        dim_x_mm = ancho * pixel_spacing[0]
+        dim_y_mm = alto * pixel_spacing[1]
+        texto = f"{dim_x_mm:.1f}mm x {dim_y_mm:.1f}mm, Espesor: {slice_thickness}mm"
+        cv2.putText(img_bgr, texto, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,255,255), 2)
+
+        recorte = img_norm[y:y+alto, x:x+ancho]
+        recorte_zoom = cv2.resize(recorte, (w, h), interpolation=cv2.INTER_CUBIC)
+
+        fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+        axs[0].imshow(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB))
+        axs[0].set_title("Corte original con cuadro")
+        axs[0].axis('off')
+
+        axs[1].imshow(recorte_zoom, cmap='gray')
+        axs[1].set_title("Recorte con zoom")
+        axs[1].axis('off')
+
+        plt.tight_layout()
+        plt.show()
+
+        # Guardar si se proporciona un nombre
+        if nombre_archivo:
+            cv2.imwrite(f"{nombre_archivo}.png", recorte_zoom)
+            print(f"Imagen recortada guardada como {nombre_archivo}.png")
+
+        return recorte_zoom
 
     
     
@@ -156,9 +194,10 @@ volumen= loader.load()
 #estudio = EstudioImaginologico(carpeta, volumen)
 #estudio.mostrar_info()
 gestor = GestionImagenes(volumen)
-tipo_corte = "axial"
-indice = 100  # puedes probar otros números dentro del rango
-tipo_binarizacion = "tozero"  # o "truncado", "tozero", etc.
+#tipo_corte = "axial"
+#indice = 100  # puedes probar otros números dentro del rango
+#tipo_binarizacion = "tozero"  # o "truncado", "tozero", etc.
 
-corte = gestor.obtener_corte(tipo_corte, indice)
-gestor.segmentar(corte, tipo_binarizacion)
+#corte = gestor.obtener_corte(tipo_corte, indice)
+#gestor.segmentar(corte, tipo_binarizacion)
+gestor.zoom_y_recorte(nombre_archivo="recorte_prueba")
