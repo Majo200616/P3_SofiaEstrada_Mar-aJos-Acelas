@@ -3,17 +3,14 @@ import numpy as np
 import pydicom
 import matplotlib.pyplot as plt
 
-class EstudioImagenologico:
-    def __init__(self, volumen, datasets):
-       
-        # Guardamos el volumen y los datasets para acceso futuro
-        self.volumen = volumen
-        self.datasets = datasets
+class EstudioImaginologico:
+    def __init__(self, patient_name, patient_id, study_date, study_time, modality, study_description):
+        self.patient_name = patient_name
+        self.patient_id = patient_id
+        self.study_date = study_date
+        self.study_time = study_time
+        self.modality = modality
+        self.study_description = study_description
 
-        # Atributos 
-        self.study_date = None
-        self.study_time = None
-        self.modality = None
-        self.description = None
-        self.series_time = None
+
        
