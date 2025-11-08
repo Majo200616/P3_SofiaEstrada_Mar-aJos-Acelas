@@ -183,10 +183,7 @@ class GestionImagenes:
         return recorte_zoom
     
     def aplicar_morfologia(self, imagen, operacion, kernel_size=3, nombre_salida=None):
-   
-        import cv2
-        import numpy as np
-        import matplotlib.pyplot as plt
+        """Aplica una transformación morfológica a la imagen dada."""
     
         if imagen.dtype != np.uint8:
             imagen = ((imagen - np.min(imagen)) / (np.max(imagen) - np.min(imagen)) * 255).astype(np.uint8)
@@ -208,7 +205,7 @@ class GestionImagenes:
     
         # Mostrar el resultado
         plt.imshow(resultado, cmap='gray')
-        plt.title(f"Transformación morfológica: {operacion}")
+        plt.title(f"aplicar_morfologia: {operacion}")
         plt.axis('off')
         plt.show()
     
@@ -320,13 +317,22 @@ def convertir_a_nifti(carpeta_dicom, nombre_salida="resultado.nii"):
   
 
 carpeta = r"C:\Users\jacel\OneDrive\Documents\GitHub\P3_SofiaEstrada_Mar-aJos-Acelas\datos\datos\PPMI\3128\MPRAGE_GRAPPA"
+loader= DicomLoader(carpeta)
+volumen= loader.load()
+#loader.mostrar_cortes()  
+#estudio = EstudioImaginologico(carpeta, volumen)
+#estudio.mostrar_info()
+gestor = GestionImagenes(volumen)
+#tipo_corte = "axial"
+#indice = 100  # puedes probar otros números dentro del rango
+#tipo_binarizacion = "tozero"  # o "truncado", "tozero", etc.
 
-loader = DicomLoader(carpeta)
-volumen = loader.load()
-loader.mostrar_cortes()
+#corte = gestor.obtener_corte(tipo_corte, indice)
+#gestor.segmentar(corte, tipo_binarizacion)
+#gestor.zoom_y_recorte(nombre_archivo="recorte_prueba")
+corte = gestor.obtener_corte("coronal", 100)
+gestor.aplicar_morfologia(corte, operacion="erode", kernel_size=10, nombre_salida="resultado_open.png")
 
-estudio = EstudioImaginologico(carpeta, volumen)
-estudio.mostrar_info()
 
 convertir_a_nifti(carpeta, "paciente3128.nii")
                 
