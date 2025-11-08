@@ -3,6 +3,7 @@ import numpy as np
 import pydicom
 import matplotlib.pyplot as plt
 import cv2
+from datetime import datetime
 import nibabel as nib
 
 
@@ -53,11 +54,6 @@ class DicomLoader:
       plt.tight_layout()
       plt.show()
     
-carpeta = r"datos\PPMI\3128\MPRAGE_GRAPPA"
-loader= DicomLoader(carpeta)
-volumen= loader.load()
-loader.mostrar_cortes()
-
 # Clase para mostrar la información del estudio DICOM
 class EstudioImaginologico:
     def __init__(self, folder_path, volume):
@@ -100,6 +96,129 @@ class EstudioImaginologico:
         print(f"Hora de la Serie:        {self.series_time}")
         print(f"Duración (segundos):     {self.duracion}")
         print(f"Forma del volumen:       {self.volume.shape}")
+
+class GestionImagenes:
+    def __init__(self, volume):
+        self.volume = volume
+
+    def obtener_corte(self, tipo, indice):
+        """Devuelve el corte solicitado según tipo ('axial', 'coronal', 'sagital') e índice."""
+        if tipo == "axial":
+            return self.volume[indice, :, :]
+        elif tipo == "coronal":
+            return self.volume[:, indice, :]
+        elif tipo == "sagital":
+            return self.volume[:, :, indice]
+        else:
+            raise ValueError("Tipo de corte no válido")
+
+    def segmentar(self, corte, tipo_binarizacion):
+        """Aplica segmentación (binarización) según el tipo especificado."""
+        metodos = {
+            "binario": cv2.THRESH_BINARY,
+            "binario_inv": cv2.THRESH_BINARY_INV,
+            "truncado": cv2.THRESH_TRUNC,
+            "tozero": cv2.THRESH_TOZERO,
+            "tozero_inv": cv2.THRESH_TOZERO_INV
+        }
+
+        metodo = metodos.get(tipo_binarizacion.lower())
+        if metodo is None:
+            raise ValueError("Tipo de binarización no válido")
+
+        umbral, segmentada = cv2.threshold(corte, 100, 255, metodo)
+
+        plt.figure(figsize=(8, 4))
+        plt.subplot(1, 2, 1)
+        plt.imshow(corte, cmap='gray')
+        plt.title("Original")
+        plt.axis('off')
+
+        plt.subplot(1, 2, 2)
+        plt.imshow(segmentada, cmap='gray')
+        plt.title(f"Segmentada ({tipo_binarizacion})")
+        plt.axis('off')
+
+        plt.show()
+
+        return segmentada
+    
+    def zoom_y_recorte(self, pixel_spacing=(1, 1), slice_thickness=1, nombre_archivo=None):
+        """Realiza un zoom sobre el corte central, dibuja el cuadro y guarda el recorte."""
+        corte = self.volume[self.volume.shape[0] // 2, :, :]
+
+        img_norm = ((corte - np.min(corte)) / (np.max(corte) - np.min(corte)) * 255).astype(np.uint8)
+        img_bgr = cv2.cvtColor(img_norm, cv2.COLOR_GRAY2BGR)
+
+        h, w = img_bgr.shape[:2]
+        x, y, ancho, alto = w // 4, h // 4, w // 2, h // 2
+
+        cv2.rectangle(img_bgr, (x, y), (x + ancho, y + alto), (0, 255, 255), 2)
+
+        dim_x_mm = ancho * pixel_spacing[0]
+        dim_y_mm = alto * pixel_spacing[1]
+        texto = f"{dim_x_mm:.1f}mm x {dim_y_mm:.1f}mm, Espesor: {slice_thickness}mm"
+        cv2.putText(img_bgr, texto, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,255,255), 2)
+
+        recorte = img_norm[y:y+alto, x:x+ancho]
+        recorte_zoom = cv2.resize(recorte, (w, h), interpolation=cv2.INTER_CUBIC)
+
+        fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+        axs[0].imshow(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB))
+        axs[0].set_title("Corte original con cuadro")
+        axs[0].axis('off')
+
+        axs[1].imshow(recorte_zoom, cmap='gray')
+        axs[1].set_title("Recorte con zoom")
+        axs[1].axis('off')
+
+        plt.tight_layout()
+        plt.show()
+
+        # Guardar si se proporciona un nombre
+        if nombre_archivo:
+            cv2.imwrite(f"{nombre_archivo}.png", recorte_zoom)
+            print(f"Imagen recortada guardada como {nombre_archivo}.png")
+
+        return recorte_zoom
+    
+    def aplicar_morfologia(self, imagen, operacion, kernel_size=3, nombre_salida=None):
+   
+        import cv2
+        import numpy as np
+        import matplotlib.pyplot as plt
+    
+        if imagen.dtype != np.uint8:
+            imagen = ((imagen - np.min(imagen)) / (np.max(imagen) - np.min(imagen)) * 255).astype(np.uint8)
+    
+        # Crear kernel morfológico
+        kernel = np.ones((kernel_size, kernel_size), np.uint8)
+    
+        # Aplicar la operación correspondiente
+        if operacion == 'erode':
+            resultado = cv2.erode(imagen, kernel, iterations=1)
+        elif operacion == 'dilate':
+            resultado = cv2.dilate(imagen, kernel, iterations=1)
+        elif operacion == 'open':
+            resultado = cv2.morphologyEx(imagen, cv2.MORPH_OPEN, kernel)
+        elif operacion == 'close':
+            resultado = cv2.morphologyEx(imagen, cv2.MORPH_CLOSE, kernel)
+        else:
+            raise ValueError("Operación morfológica no válida. Usa: 'erode', 'dilate', 'open' o 'close'.")
+    
+        # Mostrar el resultado
+        plt.imshow(resultado, cmap='gray')
+        plt.title(f"Transformación morfológica: {operacion}")
+        plt.axis('off')
+        plt.show()
+    
+        # Guardar la imagen resultante
+        if nombre_salida is None:
+            nombre_salida = f"morfologia_{operacion}.png"
+        cv2.imwrite(nombre_salida, resultado)
+        print(f"Imagen morfológica guardada como {nombre_salida}")
+    
+        return resultado
 
 def zoom_y_recorte(volume, pixel_spacing=(1,1), slice_thickness=1):
     """
@@ -155,6 +274,10 @@ def zoom_y_recorte(volume, pixel_spacing=(1,1), slice_thickness=1):
     print(f"Imagen recortada guardada como {nombre}.png")
 
 
+
+
+
+
 def convertir_a_nifti(carpeta_dicom, nombre_salida="resultado.nii"):
     """
     Convierte una carpeta con archivos DICOM a formato NIfTI (.nii).
@@ -196,18 +319,18 @@ def convertir_a_nifti(carpeta_dicom, nombre_salida="resultado.nii"):
  
   
 
-    
-    
-carpeta = r"datos\PPMI\3128\MPRAGE_GRAPPA"
-loader= DicomLoader(carpeta)
-volumen= loader.load()
-loader.mostrar_cortes()  
+carpeta = r"C:\Users\jacel\OneDrive\Documents\GitHub\P3_SofiaEstrada_Mar-aJos-Acelas\datos\datos\PPMI\3128\MPRAGE_GRAPPA"
+
+loader = DicomLoader(carpeta)
+volumen = loader.load()
+loader.mostrar_cortes()
+
 estudio = EstudioImaginologico(carpeta, volumen)
 estudio.mostrar_info()
 
-#como usarla
-carpeta = r"datos\PPMI\3128\MPRAGE_GRAPPA"
 convertir_a_nifti(carpeta, "paciente3128.nii")
+                
+
 
 
        
