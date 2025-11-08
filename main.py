@@ -57,41 +57,56 @@ loader.mostrar_cortes()
 
 # Clase para mostrar la información del estudio DICOM
 class EstudioImaginologico:
-    def __init__(self, folder_path):
-        """Lee automáticamente los metadatos DICOM desde la carpeta"""
-        self.folder_path = folder_path  # Guarda la ruta del estudio
-        
+    def __init__(self, folder_path, volume):
+        """Crea un estudio imaginológico a partir de una carpeta DICOM y su volumen reconstruido."""
+        self.folder_path = folder_path
+        self.volume = volume
+
         # Tomar el primer archivo DICOM de la carpeta
         primer_archivo = [f for f in os.listdir(folder_path) if f.lower().endswith('.dcm')][0]
-        ruta_archivo = os.path.join(folder_path, primer_archivo)
-        
-        # Cargar ese archivo usando pydicom
-        ds = pydicom.dcmread(ruta_archivo)
-        
-        # Extraer automáticamente los atributos DICOM con seguridad
+        ds = pydicom.dcmread(os.path.join(folder_path, primer_archivo))
+
+        # Extraer atributos DICOM relevantes
         self.study_date = getattr(ds, "StudyDate", None)
         self.study_time = getattr(ds, "StudyTime", None)
         self.modality = getattr(ds, "Modality", None)
         self.study_description = getattr(ds, "StudyDescription", None)
         self.series_time = getattr(ds, "SeriesTime", None)
 
+        # Calcular la duración del estudio
+        self.duracion = self._calcular_duracion()
+
+    def _calcular_duracion(self):
+        """Calcula la duración (segundos) entre StudyTime y SeriesTime."""
+        if not self.study_time or not self.series_time:
+            return None
+        try:
+            h1, m1, s1 = int(self.study_time[:2]), int(self.study_time[2:4]), int(self.study_time[4:6])
+            h2, m2, s2 = int(self.series_time[:2]), int(self.series_time[2:4]), int(self.series_time[4:6])
+            return (h2*3600 + m2*60 + s2) - (h1*3600 + m1*60 + s1)
+        except:
+            return None
+
     def mostrar_info(self):
-        """Muestra la información general del estudio DICOM"""
+        """Muestra la información general del estudio"""
         print("\nInformación del Estudio Imaginológico DICOM:")
         print(f"Fecha del Estudio:       {self.study_date}")
         print(f"Hora del Estudio:        {self.study_time}")
         print(f"Modalidad:               {self.modality}")
         print(f"Descripción del Estudio: {self.study_description}")
         print(f"Hora de la Serie:        {self.series_time}")
+        print(f"Duración (segundos):     {self.duracion}")
+        print(f"Forma del volumen:       {self.volume.shape}")
 
-
-
-# Crear e imprimir la información del estudio
-estudio = EstudioImaginologico(carpeta)  # Crear el estudio leyendo la carpeta automáticamente
-estudio.mostrar_info()                   # Mostrar la información leída desde el DICOM
 
     
-
+    
+carpeta = r"datos\PPMI\3128\MPRAGE_GRAPPA"
+loader= DicomLoader(carpeta)
+volumen= loader.load()
+loader.mostrar_cortes()  
+estudio = EstudioImaginologico(carpeta, volumen)
+estudio.mostrar_info()
 
 
 
