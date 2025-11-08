@@ -280,7 +280,7 @@ class GestorObjetos:
         """Devuelve una lista con los nombres de los objetos almacenados."""
         return list(self.objetos.keys())
     
-carpeta = r"datos\PPMI\3128\MPRAGE_GRAPPA"
+"""carpeta = r"datos\PPMI\3128\MPRAGE_GRAPPA"
 
 gestor_objetos = GestorObjetos()
 
@@ -302,11 +302,13 @@ gestor_objetos.registrar("gestor", gestor)
 #corte = gestor.obtener_corte(tipo_corte, indice)
 #gestor.segmentar(corte, tipo_binarizacion)
 #gestor.zoom_y_recorte(nombre_archivo="recorte_prueba")
-"""gestor.transformacion_morfologica(
+
+""""""gestor.transformacion_morfologica(
     tipo_corte="coronal",   # 'axial', 'coronal' o 'sagital'
     indice=100,           # número de corte
     operacion="erode",     # 'erode', 'dilate', 'open', 'close'
     kernel_size=10,        # tamaño que luego ingresará el usuario en el menú
     nombre_archivo="resultado_open"
 )"""
-gestor.convertir_a_nifti("archivo_nifti.nii")
+    
+"""gestor.convertir_a_nifti("archivo_nifti.nii")"""
