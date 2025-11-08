@@ -12,5 +12,16 @@ class EstudioImaginologico:
         self.modality = modality
         self.study_description = study_description
 
+    def mostrar_info(self):
+        print("----- Información del Estudio Imaginológico -----")
+        print(f"Nombre del Paciente:     {self.patient_name}")
+        print(f"ID del Paciente:         {self.patient_id}")
+        print(f"Fecha del Estudio:       {self.study_date}")
+        print(f"Hora del Estudio:        {self.study_time}")
+        print(f"Modalidad:               {self.modality}")
+        print(f"Descripción del Estudio: {self.study_description}")
 
+
+
+        
        
