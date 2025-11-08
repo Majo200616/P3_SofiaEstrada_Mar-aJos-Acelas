@@ -13,7 +13,7 @@ class EstudioImaginologico:
         self.study_description = study_description
 
     def mostrar_info(self):
-        print("----- Información del Estudio Imaginológico -----")
+        print("Información del Estudio Imaginológico DICOM:")
         print(f"Nombre del Paciente:     {self.patient_name}")
         print(f"ID del Paciente:         {self.patient_id}")
         print(f"Fecha del Estudio:       {self.study_date}")
@@ -21,7 +21,9 @@ class EstudioImaginologico:
         print(f"Modalidad:               {self.modality}")
         print(f"Descripción del Estudio: {self.study_description}")
 
+    
 
 
-        
+
+
        
