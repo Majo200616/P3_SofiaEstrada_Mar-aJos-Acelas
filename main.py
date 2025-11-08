@@ -55,21 +55,40 @@ loader= DicomLoader(carpeta)
 volumen= loader.load()
 loader.mostrar_cortes()
 
+# Clase para mostrar la información del estudio DICOM
 class EstudioImaginologico:
-    def __init__(self, study_date, study_time, modality, study_description, series_time):
-        self.study_date = study_date
-        self.study_time = study_time
-        self.modality = modality
-        self.study_description = study_description
-        self.series_time = series_time
+    def __init__(self, folder_path):
+        """Lee automáticamente los metadatos DICOM desde la carpeta"""
+        self.folder_path = folder_path  # Guarda la ruta del estudio
+        
+        # Tomar el primer archivo DICOM de la carpeta
+        primer_archivo = [f for f in os.listdir(folder_path) if f.lower().endswith('.dcm')][0]
+        ruta_archivo = os.path.join(folder_path, primer_archivo)
+        
+        # Cargar ese archivo usando pydicom
+        ds = pydicom.dcmread(ruta_archivo)
+        
+        # Extraer automáticamente los atributos DICOM con seguridad
+        self.study_date = getattr(ds, "StudyDate", None)
+        self.study_time = getattr(ds, "StudyTime", None)
+        self.modality = getattr(ds, "Modality", None)
+        self.study_description = getattr(ds, "StudyDescription", None)
+        self.series_time = getattr(ds, "SeriesTime", None)
 
     def mostrar_info(self):
-        print("Información del Estudio Imaginológico DICOM:")
+        """Muestra la información general del estudio DICOM"""
+        print("\nInformación del Estudio Imaginológico DICOM:")
         print(f"Fecha del Estudio:       {self.study_date}")
         print(f"Hora del Estudio:        {self.study_time}")
         print(f"Modalidad:               {self.modality}")
         print(f"Descripción del Estudio: {self.study_description}")
         print(f"Hora de la Serie:        {self.series_time}")
+
+
+
+# Crear e imprimir la información del estudio
+estudio = EstudioImaginologico(carpeta)  # Crear el estudio leyendo la carpeta automáticamente
+estudio.mostrar_info()                   # Mostrar la información leída desde el DICOM
 
     
 
