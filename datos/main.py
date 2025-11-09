@@ -7,9 +7,6 @@ Created on Sat Nov  8 18:15:42 2025
 
 import Implemementacion
 
-
-
-# ====== MENÚ PRINCIPAL ======
 def main():
     print("=== SISTEMA DE GESTIÓN DE IMÁGENES MÉDICAS ===")
     carpeta = input("Ingrese la ruta de la carpeta DICOM: ").strip()
@@ -46,10 +43,10 @@ def main():
 
         if opcion == "1":
             estudio.mostrar_info()
-            input("\nPresione Enter para volver al menú...")
+            input("\nPresione Enter para volver al menú")
 
         elif opcion == "2":
-            tipo = input("Tipo de corte (axial/coronal/sagital): ")
+            tipo = input("Tipo de corte (transversal/coronal/sagital): ")
             indice = int(input("Índice del corte: "))
             tipo_bin = input("Tipo de binarización (binario/binario_inv/truncado/tozero/tozero_inv): ")
             nombre = input("Nombre para guardar el archivo: ")
@@ -57,7 +54,7 @@ def main():
             gestor.segmentar(corte, tipo_bin, nombre)
 
         elif opcion == "3":
-            tipo = input("Tipo de corte (axial/coronal/sagital): ")
+            tipo = input("Tipo de corte (transversal(x)/coronal(y)/sagital(z)): ")
             indice = int(input("Índice del corte: "))
             operacion = input("Operación (erode/dilate/open/close): ")
             kernel = int(input("Tamaño del kernel: "))
