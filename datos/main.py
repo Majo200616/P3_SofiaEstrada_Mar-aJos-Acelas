@@ -46,6 +46,7 @@ def main():
 
         if opcion == "1":
             estudio.mostrar_info()
+            input("\nPresione Enter para volver al menú...")
 
         elif opcion == "2":
             tipo = input("Tipo de corte (axial/coronal/sagital): ")
@@ -66,10 +67,12 @@ def main():
         elif opcion == "4":
             nombre = input("Nombre para guardar el recorte: ")
             gestor.zoom_y_recorte(nombre_archivo=nombre)
+            print("Archivo guardado exitosamente")
 
         elif opcion == "5":
             nombre = input("Nombre del archivo NIfTI (sin extensión): ")
             gestor.convertir_a_nifti(nombre + ".nii")
+            print("Archivo guardado exitosamente")
 
         elif opcion == "6":
             print("Saliendo del programa...")
