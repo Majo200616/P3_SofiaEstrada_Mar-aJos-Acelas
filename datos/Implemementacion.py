@@ -71,8 +71,8 @@ class EstudioImaginologico:
         self.volume= volume
         
         #Toma el archivo DICOM
-        archivo = [f for f in os.listdir(folder_path) if f.lower().endswith('.dcm')]
-        ds = pydicom.dcmread(os.path.join(folder_path, archivo))
+        primer_archivo = [f for f in os.listdir(folder_path) if f.lower().endswith('.dcm')][0]
+        ds = pydicom.dcmread(os.path.join(folder_path, primer_archivo))
 
         #Extrae los atributos pedidos
         self.study_date = getattr(ds, "StudyDate", None)
@@ -108,11 +108,11 @@ class GestionImagenes:
 
     def obtener_corte(self, tipo, indice):
         #Devuelve el corte solicitado según tipo ('transversal', 'coronal', 'sagital') e índice
-        if tipo== "transversal":
+        if tipo == "transversal":
             return self.volume[indice, :, :]
-        elif tipo== "coronal":
+        elif tipo == "coronal":
             return self.volume[:, indice, :]
-        elif tipo== "sagital":
+        elif tipo == "sagital":
             return self.volume[:, :, indice]
         else:
             raise ValueError("Tipo de corte no válido")
